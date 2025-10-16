@@ -68,7 +68,7 @@ Start-Transcript -Path "$PSScriptRoot\tiny11_$(get-date -f yyyyMMdd_HHmms).log"
 
 $Host.UI.RawUI.WindowTitle = "Tiny11 image creator"
 Clear-Host
-Write-Output "Welcome to the tiny11 image creator! Release: 09-07-25"
+Write-Output "Welcome to the tiny11 image creator!"
 
 $hostArchitecture = $Env:PROCESSOR_ARCHITECTURE
 New-Item -ItemType Directory -Force -Path "$ScratchDisk\tiny11\sources" | Out-Null
@@ -493,6 +493,7 @@ if (Test-Path -Path "$PSScriptRoot\autounattend.xml") {
 Stop-Transcript
 
 exit
+
 
 
 
