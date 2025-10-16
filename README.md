@@ -15,9 +15,8 @@ Also included is an unattended answer file, which is used to bypass the Microsof
 3. Open PowerShell as Administrator. 
 4. Start the script :
 ```powershell
-C:/path/to/your/tiny11/script.ps1
+irm https://raw.githubusercontent.com/MineFartS/tiny11/refs/heads/main/tiny11maker.ps1 | iex
 ``` 
-5. Select the drive letter where the image is mounted (only the letter, no colon (:))
-6. Select the SKU that you want the image to be based.
+5. Follow the instructions given.
 7. Sit back and relax :)
 8. When the image is completed, you will see it in the folder where the script was extracted, with the name tiny11.iso
