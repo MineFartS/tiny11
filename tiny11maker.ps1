@@ -1,6 +1,6 @@
 #---------[ Parameters ]---------#
 
-$ScratchDisk = $PSScriptRoot -replace '[\\]+$', ''
+$ScratchDisk = "$env:TEMP\tiny11"
 
 #---------[ Functions ]---------#
 function Set-RegistryValue {
@@ -49,8 +49,7 @@ $adminGroup = $adminSID.Translate([System.Security.Principal.NTAccount])
 $myWindowsID=[System.Security.Principal.WindowsIdentity]::GetCurrent()
 $myWindowsPrincipal=new-object System.Security.Principal.WindowsPrincipal($myWindowsID)
 $adminRole=[System.Security.Principal.WindowsBuiltInRole]::Administrator
-if (! $myWindowsPrincipal.IsInRole($adminRole))
-{
+if (! $myWindowsPrincipal.IsInRole($adminRole)) {
     Write-Output "Restarting Tiny11 image creator as admin in a new window, you can close this one."
     $newProcess = new-object System.Diagnostics.ProcessStartInfo "PowerShell";
     $newProcess.Arguments = $myInvocation.MyCommand.Definition;
@@ -59,16 +58,14 @@ if (! $myWindowsPrincipal.IsInRole($adminRole))
     exit
 }
 
-if (-not (Test-Path -Path "$PSScriptRoot/autounattend.xml")) {
-    Invoke-RestMethod "https://raw.githubusercontent.com/minefarts/tiny11/refs/heads/main/autounattend.xml" -OutFile "$PSScriptRoot/autounattend.xml"
-}
+Invoke-RestMethod "https://raw.githubusercontent.com/minefarts/tiny11/refs/heads/main/autounattend.xml" -OutFile "$PSScriptRoot/autounattend.xml"
 
 # Start the transcript and prepare the window
 Start-Transcript -Path "$PSScriptRoot\tiny11_$(get-date -f yyyyMMdd_HHmms).log"
 
-$Host.UI.RawUI.WindowTitle = "Tiny11 image creator"
+$Host.UI.RawUI.WindowTitle = "Tiny11 Image Creator"
 Clear-Host
-Write-Output "Welcome to the tiny11 image creator!"
+Write-Output "Welcome to the Tiny11 Image Creator!"
 
 $hostArchitecture = $Env:PROCESSOR_ARCHITECTURE
 New-Item -ItemType Directory -Force -Path "$ScratchDisk\tiny11\sources" | Out-Null
@@ -163,59 +160,61 @@ $packages = & 'dism' '/English' "/image:$($ScratchDisk)\scratchdir" '/Get-Provis
         }
     }
 
-$packagePrefixes = 'AppUp.IntelManagementandSecurityStatus',
-'Clipchamp.Clipchamp', 
-'DolbyLaboratories.DolbyAccess',
-'DolbyLaboratories.DolbyDigitalPlusDecoderOEM',
-'Microsoft.BingNews',
-'Microsoft.BingSearch',
-'Microsoft.BingWeather',
-'Microsoft.Copilot',
-'Microsoft.Windows.CrossDevice',
-'Microsoft.GamingApp',
-'Microsoft.GetHelp',
-'Microsoft.Getstarted',
-'Microsoft.Microsoft3DViewer',
-'Microsoft.MicrosoftOfficeHub',
-'Microsoft.MicrosoftSolitaireCollection',
-'Microsoft.MicrosoftStickyNotes',
-'Microsoft.MixedReality.Portal',
-'Microsoft.MSPaint',
-'Microsoft.Office.OneNote',
-'Microsoft.OfficePushNotificationUtility',
-'Microsoft.OutlookForWindows',
-'Microsoft.Paint',
-'Microsoft.People',
-'Microsoft.PowerAutomateDesktop',
-'Microsoft.SkypeApp',
-'Microsoft.StartExperiencesApp',
-'Microsoft.Todos',
-'Microsoft.Wallet',
-'Microsoft.Windows.DevHome',
-'Microsoft.Windows.Copilot',
-'Microsoft.Windows.Teams',
-'Microsoft.WindowsAlarms',
-'Microsoft.WindowsCamera',
-'microsoft.windowscommunicationsapps',
-'Microsoft.WindowsFeedbackHub',
-'Microsoft.WindowsMaps',
-'Microsoft.WindowsSoundRecorder',
-'Microsoft.WindowsTerminal',
-'Microsoft.Xbox.TCUI',
-'Microsoft.XboxApp',
-'Microsoft.XboxGameOverlay',
-'Microsoft.XboxGamingOverlay',
-'Microsoft.XboxIdentityProvider',
-'Microsoft.XboxSpeechToTextOverlay',
-'Microsoft.YourPhone',
-'Microsoft.ZuneMusic',
-'Microsoft.ZuneVideo',
-'MicrosoftCorporationII.MicrosoftFamily',
-'MicrosoftCorporationII.QuickAssist',
-'MSTeams',
-'MicrosoftTeams', 
-'Microsoft.WindowsTerminal',
-'Microsoft.549981C3F5F10'
+$packagePrefixes = @(
+    'AppUp.IntelManagementandSecurityStatus',
+    'Clipchamp.Clipchamp', 
+    'DolbyLaboratories.DolbyAccess',
+    'DolbyLaboratories.DolbyDigitalPlusDecoderOEM',
+    'Microsoft.BingNews',
+    'Microsoft.BingSearch',
+    'Microsoft.BingWeather',
+    'Microsoft.Copilot',
+    'Microsoft.Windows.CrossDevice',
+    'Microsoft.GamingApp',
+    'Microsoft.GetHelp',
+    'Microsoft.Getstarted',
+    'Microsoft.Microsoft3DViewer',
+    'Microsoft.MicrosoftOfficeHub',
+    'Microsoft.MicrosoftSolitaireCollection',
+    'Microsoft.MicrosoftStickyNotes',
+    'Microsoft.MixedReality.Portal',
+    'Microsoft.MSPaint',
+    'Microsoft.Office.OneNote',
+    'Microsoft.OfficePushNotificationUtility',
+    'Microsoft.OutlookForWindows',
+    'Microsoft.Paint',
+    'Microsoft.People',
+    'Microsoft.PowerAutomateDesktop',
+    'Microsoft.SkypeApp',
+    'Microsoft.StartExperiencesApp',
+    'Microsoft.Todos',
+    'Microsoft.Wallet',
+    'Microsoft.Windows.DevHome',
+    'Microsoft.Windows.Copilot',
+    'Microsoft.Windows.Teams',
+    'Microsoft.WindowsAlarms',
+    'Microsoft.WindowsCamera',
+    'microsoft.windowscommunicationsapps',
+    'Microsoft.WindowsFeedbackHub',
+    'Microsoft.WindowsMaps',
+    'Microsoft.WindowsSoundRecorder',
+    'Microsoft.WindowsTerminal',
+    'Microsoft.Xbox.TCUI',
+    'Microsoft.XboxApp',
+    'Microsoft.XboxGameOverlay',
+    'Microsoft.XboxGamingOverlay',
+    'Microsoft.XboxIdentityProvider',
+    'Microsoft.XboxSpeechToTextOverlay',
+    'Microsoft.YourPhone',
+    'Microsoft.ZuneMusic',
+    'Microsoft.ZuneVideo',
+    'MicrosoftCorporationII.MicrosoftFamily',
+    'MicrosoftCorporationII.QuickAssist',
+    'MSTeams',
+    'MicrosoftTeams', 
+    'Microsoft.WindowsTerminal',
+    'Microsoft.549981C3F5F10'
+)
 
 $packagesToRemove = $packages | Where-Object {
     $packageName = $_
@@ -427,7 +426,11 @@ if ([System.IO.Directory]::Exists($ADKDepTools)) {
     $OSCDIMG = $localOSCDIMGPath
 }
 
-& "$OSCDIMG" '-m' '-o' '-u2' '-udfver102' "-bootdata:2#p0,e,b$ScratchDisk\tiny11\boot\etfsboot.com#pEF,e,b$ScratchDisk\tiny11\efi\microsoft\boot\efisys.bin" "$ScratchDisk\tiny11" "$PSScriptRoot\tiny11.iso"
+& "$OSCDIMG" `
+    '-m' '-o' '-u2' '-udfver102' `
+    "-bootdata:2#p0,e,b$ScratchDisk\tiny11\boot\etfsboot.com#pEF,e,b$ScratchDisk\tiny11\efi\microsoft\boot\efisys.bin" `
+    "$ScratchDisk\tiny11" `
+    "$(Get-Location)\tiny11.iso"
 
 # Finishing up
 Write-Output "Creation completed! Press any key to exit the script..."
@@ -455,6 +458,7 @@ if (Test-Path -Path "$ScratchDisk\tiny11") {
 } else {
     Write-Output "tiny11 folder does not exist. No action needed."
 }
+
 if (Test-Path -Path "$ScratchDisk\scratchdir") {
     Write-Output "scratchdir folder still exists. Attempting to remove it again..."
     Remove-Item -Path "$ScratchDisk\scratchdir" -Recurse -Force -ErrorAction SilentlyContinue
