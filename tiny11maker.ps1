@@ -73,11 +73,9 @@ Write-Output "Welcome to the tiny11 image creator! Release: 09-07-25"
 $hostArchitecture = $Env:PROCESSOR_ARCHITECTURE
 New-Item -ItemType Directory -Force -Path "$ScratchDisk\tiny11\sources" | Out-Null
 do {
-    if (-not $ISO) {
-        $DriveLetter = Read-Host "Please enter the drive letter for the Windows 11 image"
-    } else {
-        $DriveLetter = $ISO
-    }
+    
+	$DriveLetter = Read-Host "Please enter the drive letter for the Windows 11 image"
+    
     if ($DriveLetter -match '^[c-zC-Z]$') {
         $DriveLetter = $DriveLetter + ":"
         Write-Output "Drive letter set to $DriveLetter"
@@ -495,6 +493,7 @@ if (Test-Path -Path "$PSScriptRoot\autounattend.xml") {
 Stop-Transcript
 
 exit
+
 
 
 
