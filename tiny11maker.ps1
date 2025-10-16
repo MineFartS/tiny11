@@ -1,43 +1,6 @@
-<#
-.SYNOPSIS
-    Scripts to build a trimmed-down Windows 11 image.
-
-.DESCRIPTION
-    This is a script created to automate the build of a streamlined Windows 11 image, similar to tiny10.
-    My main goal is to use only Microsoft utilities like DISM, and no utilities from external sources.
-    The only executable included is oscdimg.exe, which is provided in the Windows ADK and it is used to create bootable ISO images.
-
-.PARAMETER ISO
-    Drive letter given to the mounted iso (eg: E)
-
-.PARAMETER SCRATCH
-    Drive letter of the desired scratch disk (eg: D)
-
-.EXAMPLE
-    .\tiny11maker.ps1 E D
-    .\tiny11maker.ps1 -ISO E -SCRATCH D
-    .\tiny11maker.ps1 -SCRATCH D -ISO E
-    .\tiny11maker.ps1
-
-    *If you ordinal parameters the first one must be the mounted iso. The second is the scratch drive.
-    prefer the use of full named parameter (eg: "-ISO") as you can put in the order you want.
-
-.NOTES
-    Auteur: ntdevlabs
-    Date: 09-07-25
-#>
-
 #---------[ Parameters ]---------#
-param (
-    [ValidatePattern('^[c-zC-Z]$')][string]$ISO,
-    [ValidatePattern('^[c-zC-Z]$')][string]$SCRATCH
-)
 
-if (-not $SCRATCH) {
-    $ScratchDisk = $PSScriptRoot -replace '[\\]+$', ''
-} else {
-    $ScratchDisk = $SCRATCH + ":"
-}
+$ScratchDisk = $PSScriptRoot -replace '[\\]+$', ''
 
 #---------[ Functions ]---------#
 function Set-RegistryValue {
@@ -532,5 +495,6 @@ if (Test-Path -Path "$PSScriptRoot\autounattend.xml") {
 Stop-Transcript
 
 exit
+
 
 
