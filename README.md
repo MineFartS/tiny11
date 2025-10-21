@@ -10,7 +10,7 @@ Also included is an unattended answer file, which is used to bypass the Microsof
 
 ---
 ## Instructions:
-1. Download Windows 11 from the [Microsoft website](https://www.microsoft.com/software-download/windows11)
+1. Download Windows 11 from the <a href="https://www.microsoft.com/en-us/software-download/windows11#:~:text=Download Windows 11 Disk Image">Microsoft website </a>
 2. Mount the downloaded ISO image using Windows Explorer.
 3. Open PowerShell as Administrator. 
 4. Start the script :
