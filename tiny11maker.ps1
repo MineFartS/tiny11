@@ -103,12 +103,13 @@ Remove-Item "$ScratchDisk\tiny11\sources\install.esd" > $null 2>&1
 Write-Output "Copy complete!"
 Start-Sleep -Seconds 2
 Clear-Host
-Write-Output "Getting image information:"
-$ImagesIndex = (Get-WindowsImage -ImagePath $ScratchDisk\tiny11\sources\install.wim).ImageIndex
-while ($ImagesIndex -notcontains $index) {
-    Get-WindowsImage -ImagePath $ScratchDisk\tiny11\sources\install.wim
-    $index = Read-Host "Please enter the image index"
-}
+
+# Find Index # for Windows 11 Pro
+$index = ( `
+    (Get-WindowsImage -ImagePath $ScratchDisk\tiny11\sources\install.wim) `
+    | Where-Object ImageName -eq 'Windows 11 Pro' `
+).ImageIndex
+
 Write-Output "Mounting Windows image. This may take a while."
 $wimFilePath = "$ScratchDisk\tiny11\sources\install.wim"
 & takeown "/F" $wimFilePath
