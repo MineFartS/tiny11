@@ -91,7 +91,7 @@ New-Item `
     | Out-Null
 
 #
-$DriveLetter = Read-Host "Image Drive Letter"
+$DriveLetter = (Read-Host "Image Drive Letter") + ':'
 
 #
 Write-Output "Downloading 'autounattend.xml' ..."
@@ -107,12 +107,12 @@ Invoke-WebRequest `
 #
 if ((Test-Path "$DriveLetter\sources\boot.wim") -eq $false -or (Test-Path "$DriveLetter\sources\install.wim") -eq $false) {
     if ((Test-Path "$DriveLetter\sources\install.esd") -eq $true) {
-        Write-Output "Found install.esd, converting to install.wim..."
-        Get-WindowsImage -ImagePath $DriveLetter\sources\install.esd
+        Write-Output "Found install.esd, converting to install.wim ..."
+        Get-WindowsImage -ImagePath "$DriveLetter\sources\install.esd"
         $index = Read-Host "Please enter the image index"
         Write-Output ' '
-        Write-Output 'Converting install.esd to install.wim. This may take a while...'
-        Export-WindowsImage -SourceImagePath $DriveLetter\sources\install.esd -SourceIndex $index -DestinationImagePath $Scratch\tiny11\sources\install.wim -Compressiontype Maximum -CheckIntegrity
+        Write-Output 'Converting install.esd to install.wim ...'
+        Export-WindowsImage -SourceImagePath "$DriveLetter\sources\install.esd" -SourceIndex $index -DestinationImagePath $Scratch\tiny11\sources\install.wim -Compressiontype Maximum -CheckIntegrity
     } else {
         Write-Output "Can't find Windows OS Installation files in the specified Drive Letter.."
         Write-Output "Please enter the correct DVD Drive Letter.."
@@ -209,9 +209,10 @@ $packagePrefixes = @(
     'Microsoft.549981C3F5F10'
 )
 
+#
 dism.exe `
     /English `
-    /image:"$($Scratch)\scratchdir" `
+    "/image:$($Scratch)\scratchdir" `
     /Get-ProvisionedAppxPackages `
     | ForEach-Object {
         if ($_ -match 'PackageName : (.*)') {
@@ -225,9 +226,9 @@ dism.exe `
                 Write-Output "Removing Package '$packageName' ..."
                 dism.exe `
                     /English `
-                    "/image:$($Scratch)\scratchdir" `
+                    "/image:$Scratch\scratchdir" `
                     /Remove-ProvisionedAppxPackage `
-                    /PackageName:"$package"
+                    "/PackageName:$package"
                     
             }
 
@@ -355,7 +356,7 @@ Set-RegistryValue 'HKLM\zSOFTWARE\Policies\Microsoft\Windows\Explorer' 'DisableS
 Write-Output "Preventing installation of Teams ..."
 Set-RegistryValue 'HKLM\zSOFTWARE\Policies\Microsoft\Teams' 'DisableInstallation' 'REG_DWORD' '1'
 
-Write-Output "Preventing installation of New Outlook ...":
+Write-Output "Preventing installation of New Outlook ..."
 Set-RegistryValue 'HKLM\zSOFTWARE\Policies\Microsoft\Windows\Windows Mail' 'PreventRun' 'REG_DWORD' '1'
 
 Write-Host "Deleting scheduled task definition files ..."
@@ -405,10 +406,10 @@ Dismount-WindowsImage `
 Write-Host "Exporting image ..."
 Dism.exe `
     /Export-Image `
-    /SourceImageFile:"$Scratch\tiny11\sources\install.wim" `
-    /SourceIndex:$index `
-    /DestinationImageFile:"$Scratch\tiny11\sources\install2.wim" `
-    /Compress:recovery
+    "/SourceImageFile:$Scratch\tiny11\sources\install.wim" `
+    "/SourceIndex:$index" `
+    "/DestinationImageFile:$Scratch\tiny11\sources\install2.wim" `
+    "/Compress:recovery"
 
 Remove-Item `
     -Path "$Scratch\tiny11\sources\install.wim" `
@@ -449,8 +450,6 @@ Write-Output "Unmounting image..."
 Dismount-WindowsImage `
     -Path "$Scratch\scratchdir" `
     -Save
-
-Clear-Host
 
 Write-Output "Copying unattended file for bypassing MS account on OOBE..."
 Copy-Item `
