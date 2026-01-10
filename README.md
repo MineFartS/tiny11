@@ -3,14 +3,17 @@
 ### Build a debloated Windows 11 image
 
 ---
+
 ## Parameters:
 
 | Name    | Default                                  | Description          |
 |---------|------------------------------------------|----------------------|
 | Scratch | %tmp%\tiny11                             | Temporary Directory  |
 | Out     | C:\Users\%username%\Downloads\tiny11.iso | Output ISO file path |
+| Source  | {Opens Explorer Dialog}                  | Windows 11 ISO       |
 
 ---
+
 ## Instructions:
 
 1. Download the Windows 11 ISO from the [Microsoft website](https://www.microsoft.com/en-us/software-download/windows11#:~:text=Download%20Windows%2011%20Disk%20Image)
