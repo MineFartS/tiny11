@@ -1,5 +1,10 @@
 
-$Scratch = "$env:TEMP\tiny11"
+param(
+    $Scratch = "$env:TEMP\tiny11"
+)
+
+#===========================================================================================================
+# Force Elevation
 
 # Check and run the script as admin if required
 $adminSID = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")
@@ -16,7 +21,8 @@ if (! $myWindowsPrincipal.IsInRole($adminRole)) {
     exit
 }
 
-#---------[ Functions ]---------#
+#===========================================================================================================
+# Functions
 function Set-RegistryValue {
     param (
         [string]$path,
@@ -44,7 +50,7 @@ function Remove-RegistryValue {
 	}
 }
 
-function SetPermissions {
+function Repair-Permissions {
     param(
         [string] $Path
     )
@@ -75,7 +81,8 @@ function Dismount-Registry {
     reg unload HKLM\zSYSTEM | Out-Null
 }
 
-#---------[ Execution ]---------#
+#===========================================================================================================
+# Prepare the Terminal
 
 # Set the window title
 $Host.UI.RawUI.WindowTitle = "Tiny11 Image Creator"
@@ -83,62 +90,83 @@ $Host.UI.RawUI.WindowTitle = "Tiny11 Image Creator"
 #
 Clear-Host
 
-#
+#===========================================================================================================
+# Create Scratch Directories
+
+Remove-Item `
+    -Path $Scratch `
+    -Verbose -Recurse -Force
+
 New-Item `
     -ItemType Directory `
     -Force `
     -Path "$Scratch\tiny11\sources" `
     | Out-Null
 
-#
-$DriveLetter = (Read-Host "Image Drive Letter") + ':'
-
-#
-Write-Output "Downloading 'autounattend.xml' ..."
-Invoke-RestMethod `
-    "https://raw.githubusercontent.com/minefarts/tiny11/refs/heads/main/autounattend.xml" `
-    -OutFile "$Scratch/autounattend.xml"
-
-Write-Output "Downloading 'oscdimg.exe' ..."
-Invoke-WebRequest `
-    -Uri "https://msdl.microsoft.com/download/symbols/oscdimg.exe/3D44737265000/oscdimg.exe" `
-    -OutFile "$Scratch\oscdimg.exe"
-
-#
-if ((Test-Path "$DriveLetter\sources\boot.wim") -eq $false -or (Test-Path "$DriveLetter\sources\install.wim") -eq $false) {
-    if ((Test-Path "$DriveLetter\sources\install.esd") -eq $true) {
-        Write-Output "Found install.esd, converting to install.wim ..."
-        Get-WindowsImage -ImagePath "$DriveLetter\sources\install.esd"
-        $index = Read-Host "Please enter the image index"
-        Write-Output ' '
-        Write-Output 'Converting install.esd to install.wim ...'
-        Export-WindowsImage -SourceImagePath "$DriveLetter\sources\install.esd" -SourceIndex $index -DestinationImagePath $Scratch\tiny11\sources\install.wim -Compressiontype Maximum -CheckIntegrity
-    } else {
-        Write-Output "Can't find Windows OS Installation files in the specified Drive Letter.."
-        Write-Output "Please enter the correct DVD Drive Letter.."
-        exit
-    }
-}
-
-# Copy Windows Image
-Copy-Item `
-    -Path "$DriveLetter\*" `
-    -Destination "$Scratch\tiny11" `
-    -Recurse -Force
-
-#
-SetPermissions "$Scratch\tiny11\sources\install.esd"
-Remove-Item "$Scratch\tiny11\sources\install.esd" | Out-Null
-
-#
 New-Item `
     -ItemType Directory `
     -Force `
     -Path "$Scratch\scratchdir" `
     | Out-Null
 
+#===========================================================================================================
+# Download,Mount & extract the Windows 11 Installer ISO
+
 #
-SetPermissions "$Scratch\tiny11\sources\install.wim"
+Add-Type -AssemblyName System.Windows.Forms
+$fileDialog = New-Object System.Windows.Forms.OpenFileDialog
+$fileDialog.InitialDirectory = "$env:USERPROFILE\Downloads"
+$fileDialog.Filter = 'ISO Files (*.iso)|*.iso|All Files (*.*)|*.*'
+$fileDialog.Title = 'Please select an ISO file to mount'
+$fileDialog.ShowHelp = $true
+$fileDialog.ShowDialog() | Out-Null
+
+#===========================================================================================================
+# Download & Extract the Windows 10 Installer ZIP
+    
+Invoke-WebRequest `
+    -Uri "https://github.com/MineFartS/tiny11/raw/refs/heads/master/Win10Setup.zip" `
+    -OutFile "$Scratch\Win10Setup.zip"
+
+Expand-Archive `
+    -Path "$Scratch\Win10Setup.zip" `
+    -DestinationPath "$Scratch\tiny11" `
+    -Force -Verbose
+
+#===========================================================================================================
+
+# Mount the ISO and get the assigned drive letter
+$mountResult = Mount-DiskImage `
+    -ImagePath $fileDialog.FileName `
+    -PassThru
+
+#
+$ISOmnt = ($mountResult | Get-Volume).DriveLetter
+
+# Copy Windows 11 Install Image
+Copy-Item `
+    -Path $ISOmnt':\sources\install.wim' `
+    -Destination "$Scratch\tiny11\sources\install.wim" `
+    -Force -Verbose
+
+# Unmount the ISO
+Get-Volume `
+    -DriveLetter $ISOmnt `
+    | Get-DiskImage `
+    | Dismount-DiskImage
+
+#===========================================================================================================
+
+Write-Output "Downloading 'oscdimg.exe' ..."
+Invoke-WebRequest `
+    -Uri "https://msdl.microsoft.com/download/symbols/oscdimg.exe/3D44737265000/oscdimg.exe" `
+    -OutFile "$Scratch\oscdimg.exe"
+
+#===========================================================================================================
+# Mount Windows 11 Image
+
+#
+Repair-Permissions "$Scratch\tiny11\sources\install.wim"
 
 # Find Index # for Windows 11 Pro
 $index = ( `
@@ -151,6 +179,8 @@ Mount-WindowsImage `
     -ImagePath "$Scratch\tiny11\sources\install.wim" `
     -Index $index `
     -Path "$Scratch\scratchdir"
+
+#===========================================================================================================
 
 #
 $packagePrefixes = @(
@@ -224,6 +254,7 @@ dism.exe `
             if ($packagePrefixes -contains ($packagePrefixes | Where-Object { $packageName -like "*$_*" })) {
                 
                 Write-Output "Removing Package '$packageName' ..."
+
                 dism.exe `
                     /English `
                     "/image:$Scratch\scratchdir" `
@@ -250,7 +281,7 @@ Remove-Item `
     -Path "$Scratch\scratchdir\Program Files (x86)\Microsoft\EdgeCore" `
     -Recurse -Force | Out-Null
 
-SetPermissions "$Scratch\scratchdir\Windows\System32\Microsoft-Edge-Webview"
+Repair-Permissions "$Scratch\scratchdir\Windows\System32\Microsoft-Edge-Webview"
 Remove-Item `
     -Path "$Scratch\scratchdir\Windows\System32\Microsoft-Edge-Webview" `
     -Recurse -Force | Out-Null
@@ -258,7 +289,7 @@ Remove-Item `
 Write-Output "Removing OneDrive ..."
 
 #
-SetPermissions "$Scratch\scratchdir\Windows\System32\OneDriveSetup.exe"
+Repair-Permissions "$Scratch\scratchdir\Windows\System32\OneDriveSetup.exe"
 Remove-Item `
     -Path "$Scratch\scratchdir\Windows\System32\OneDriveSetup.exe" `
     -Force | Out-Null
@@ -421,7 +452,7 @@ Rename-Item `
     | Out-Null
 
 Write-Output "Mounting boot image ..."
-SetPermissions "$Scratch\tiny11\sources\boot.wim"
+Repair-Permissions "$Scratch\tiny11\sources\boot.wim"
 
 Mount-WindowsImage `
     -ImagePath "$Scratch\tiny11\sources\boot.wim" `
@@ -470,4 +501,4 @@ Remove-Item `
     -Recurse -Force | Out-Null
 
 Write-Output "Creation completed!"
-Read-Host "Press Enter to exit"
+Pause
