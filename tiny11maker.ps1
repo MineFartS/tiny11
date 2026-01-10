@@ -1,7 +1,8 @@
 
 param(
     $Scratch = "$env:TEMP\tiny11",
-    $Out = "$env:USERPROFILE\Downloads\tiny11.iso"
+    $Out = "$env:USERPROFILE\Downloads\tiny11.iso",
+    $Source
 )
 
 #===========================================================================================================
@@ -36,7 +37,9 @@ function Repair-Permissions {
         | Out-Null
 
     takeown.exe /F $Path
+
     icacls.exe $Path /grant "$($adminGroup.Value):(F)"
+
 }
 
 #===========================================================================================================
@@ -50,13 +53,19 @@ Clear-Host
 #===========================================================================================================
 # Prompt for the Windows 11 Installer ISO
 
-Add-Type -AssemblyName System.Windows.Forms
-$fileDialog = New-Object System.Windows.Forms.OpenFileDialog
-$fileDialog.InitialDirectory = "$env:USERPROFILE\Downloads"
-$fileDialog.Filter = 'ISO Files (*.iso)|*.iso|All Files (*.*)|*.*'
-$fileDialog.Title = 'Please select an ISO file to mount'
-$fileDialog.ShowHelp = $true
-$fileDialog.ShowDialog() | Out-Null
+if ($null -eq $Source) {
+
+    Add-Type -AssemblyName System.Windows.Forms
+    $fileDialog = New-Object System.Windows.Forms.OpenFileDialog
+    $fileDialog.InitialDirectory = "$env:USERPROFILE\Downloads"
+    $fileDialog.Filter = 'ISO Files (*.iso)|*.iso|All Files (*.*)|*.*'
+    $fileDialog.Title = 'Please select an ISO file to mount'
+    $fileDialog.ShowHelp = $true
+    $fileDialog.ShowDialog() | Out-Null
+
+    $Source = $fileDialog.FileName
+
+}
 
 #===========================================================================================================
 # Create Scratch Directories
@@ -70,7 +79,7 @@ Remove-Item `
 New-Item `
     -ItemType Directory `
     -Force `
-    -Path "$Scratch\ISO" `
+    -Path "$Scratch\ISO\sources\" `
     | Out-Null
 
 New-Item `
@@ -84,8 +93,9 @@ New-Item `
 
 # Mount the ISO and get the assigned drive letter
 $mountResult = Mount-DiskImage `
-    -ImagePath $fileDialog.FileName `
-    -PassThru
+    -ImagePath $Source `
+    -PassThru `
+    | Out-Null
 
 #
 $ISOmnt = ($mountResult | Get-Volume).DriveLetter
@@ -106,7 +116,7 @@ Get-Volume `
 # Download & Extract the Windows 10 Installer ZIP
     
 Invoke-WebRequest `
-    -Uri "https://github.com/MineFartS/tiny11/raw/refs/heads/master/Win10Setup.zip" `
+    -Uri "https://github.com/MineFartS/tiny11/raw/refs/heads/main/Win10Setup.zip" `
     -OutFile "$Scratch\Win10Setup.zip"
 
 Expand-Archive `
@@ -248,7 +258,6 @@ Rename-Item `
 # Finalize
 
 # Finishing up
-Write-Output "Performing Cleanup ..."
 Remove-Item `
     -Path $Scratch `
     -Recurse -Force | Out-Null
