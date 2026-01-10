@@ -1,6 +1,7 @@
 
 param(
-    $Scratch = "$env:TEMP\tiny11"
+    $Scratch = "$env:TEMP\tiny11",
+    $Out = "$env:USERPROFILE\Downloads\tiny11.iso"
 )
 
 #===========================================================================================================
@@ -482,17 +483,11 @@ Dismount-WindowsImage `
     -Path "$Scratch\scratchdir" `
     -Save
 
-Write-Output "Copying unattended file for bypassing MS account on OOBE..."
-Copy-Item `
-    -Path "$Scratch\autounattend.xml" `
-    -Destination "$Scratch\tiny11\autounattend.xml" `
-    -Force | Out-Null
-
 & "$Scratch\oscdimg.exe" `
     '-m' '-o' '-u2' '-udfver102' `
     "-bootdata:2#p0,e,b$Scratch\tiny11\boot\etfsboot.com#pEF,e,b$Scratch\tiny11\efi\microsoft\boot\efisys.bin" `
     "$Scratch\tiny11" `
-    "$(Get-Location)\tiny11.iso"
+    $Out
 
 # Finishing up
 Write-Output "Performing Cleanup ..."
