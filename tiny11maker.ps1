@@ -9,8 +9,6 @@ param(
 # Force Elevation
 
 # Check and run the script as admin if required
-$adminSID = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-544")
-$adminGroup = $adminSID.Translate([System.Security.Principal.NTAccount])
 $myWindowsID=[System.Security.Principal.WindowsIdentity]::GetCurrent()
 $myWindowsPrincipal=new-object System.Security.Principal.WindowsPrincipal($myWindowsID)
 $adminRole=[System.Security.Principal.WindowsBuiltInRole]::Administrator
@@ -21,25 +19,6 @@ if (! $myWindowsPrincipal.IsInRole($adminRole)) {
     $newProcess.Verb = "runas";
     [System.Diagnostics.Process]::Start($newProcess);
     exit
-}
-
-#===========================================================================================================
-
-function Repair-Permissions {
-    param(
-        [string] $Path
-    )
-
-    Set-ItemProperty `
-        -Path $Path `
-        -Name IsReadOnly `
-        -Value $false `
-        | Out-Null
-
-    takeown.exe /F $Path
-
-    icacls.exe $Path /grant "$($adminGroup.Value):(F)"
-
 }
 
 #===========================================================================================================
@@ -70,7 +49,9 @@ if ($null -eq $Source) {
 #===========================================================================================================
 # Create Scratch Directories
 
-Repair-Permissions $Scratch
+takeown.exe /f $Scratch /r /d Y
+
+icacls.exe $Scratch /t /c /grant Administrators:F
 
 Remove-Item `
     -Path $Scratch `
@@ -94,8 +75,7 @@ New-Item `
 # Mount the ISO and get the assigned drive letter
 $mountResult = Mount-DiskImage `
     -ImagePath $Source `
-    -PassThru `
-    | Out-Null
+    -PassThru
 
 #
 $ISOmnt = ($mountResult | Get-Volume).DriveLetter
@@ -114,7 +94,7 @@ Get-Volume `
 
 #===========================================================================================================
 # Download & Extract the Windows 10 Installer ZIP
-    
+
 Invoke-WebRequest `
     -Uri "https://github.com/MineFartS/tiny11/raw/refs/heads/main/Win10Setup.zip" `
     -OutFile "$Scratch\Win10Setup.zip"
@@ -133,13 +113,12 @@ Invoke-RestMethod `
 
 Expand-Archive `
     "$Scratch/win11debloat.zip" `
-    "$Scratch/Win11Debloat" `
+    "$Scratch" `
     -Verbose -Force
 
 #===========================================================================================================
 # Mount Windows 11 Image
 
-#
 Repair-Permissions "$Scratch\ISO\sources\install.wim"
 
 # Find Index # for Windows 11 Pro
@@ -148,7 +127,6 @@ $index = ( `
     | Where-Object ImageName -eq 'Windows 11 Pro' `
 ).ImageIndex
 
-#
 Mount-WindowsImage `
     -ImagePath "$Scratch\ISO\sources\install.wim" `
     -Index $index `
@@ -157,7 +135,7 @@ Mount-WindowsImage `
 #===========================================================================================================
 # Remove Packages from the image
 
-Get-Content -Path "$Scratch\Win11Debloat\Appslist.txt" | ForEach-Object {
+Get-Content -Path "$Scratch\Win11Debloat-master\Appslist.txt" | ForEach-Object {
     
     #
     $app = ($_.Split('#')[0].Trim())
@@ -207,7 +185,7 @@ reg load HKLM\zSOFTWARE "$Scratch\MNT\Windows\System32\config\SOFTWARE" | Out-Nu
 reg load HKLM\zSYSTEM "$Scratch\MNT\Windows\System32\config\SYSTEM" | Out-Null
 
 # Iter through REG files
-Get-ChildItem -Path "$Scratch\Win11Debloat\Regfiles\" | ForEach-Object {
+Get-ChildItem -Path "$Scratch\Win11Debloat-master\Regfiles\" | ForEach-Object {
 
     Write-Host "Updating Registry: '$($_.Name)'"
     
@@ -257,10 +235,6 @@ Rename-Item `
 #===========================================================================================================
 # Finalize
 
-# Finishing up
-Remove-Item `
-    -Path $Scratch `
-    -Recurse -Force | Out-Null
-
 Write-Output "Creation completed!"
+
 Pause
