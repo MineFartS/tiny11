@@ -54,7 +54,15 @@ takeown.exe /f $Scratch /r /d Y
 icacls.exe $Scratch /t /c /grant Administrators:F
 
 Remove-Item `
-    -Path $Scratch `
+    -Path "$Scratch\ISO\" `
+    -Verbose -Recurse -Force
+
+Remove-Item `
+    -Path "$Scratch\MNT\" `
+    -Verbose -Recurse -Force
+
+Remove-Item `
+    -Path "$Scratch\Win11Debloat-master\" `
     -Verbose -Recurse -Force
 
 New-Item `
@@ -80,11 +88,19 @@ $mountResult = Mount-DiskImage `
 #
 $ISOmnt = ($mountResult | Get-Volume).DriveLetter
 
-# Copy Windows 11 Install Image
-Copy-Item `
-    -Path $ISOmnt':\sources\install.wim' `
-    -Destination "$Scratch\ISO\sources\install.wim" `
-    -Force -Verbose
+# Find Index # for Windows 11 Pro
+$index = ( `
+    (Get-WindowsImage -ImagePath "$($ISOmnt):\sources\install.wim") `
+    | Where-Object ImageName -eq 'Windows 11 Pro' `
+).ImageIndex
+
+Write-Host "Exporting image ..."
+Dism.exe `
+    /Export-Image `
+    "/SourceImageFile:$($ISOmnt):\sources\install.wim" `
+    "/SourceIndex:$index" `
+    "/DestinationImageFile:$Scratch\ISO\sources\install.wim" `
+    "/Compress:recovery"
 
 # Unmount the ISO
 Get-Volume `
@@ -95,9 +111,13 @@ Get-Volume `
 #===========================================================================================================
 # Download & Extract the Windows 10 Installer ZIP
 
-Invoke-WebRequest `
-    -Uri "https://github.com/MineFartS/tiny11/raw/refs/heads/main/Win10Setup.zip" `
-    -OutFile "$Scratch\Win10Setup.zip"
+if (-not (Test-Path "$Scratch\Win10Setup.zip")) {
+
+    Invoke-WebRequest `
+        -Uri "https://github.com/MineFartS/tiny11/raw/refs/heads/main/Win10Setup.zip" `
+        -OutFile "$Scratch\Win10Setup.zip"
+
+}
 
 Expand-Archive `
     -Path "$Scratch\Win10Setup.zip" `
@@ -107,13 +127,17 @@ Expand-Archive `
 #===========================================================================================================
 # Download & Extract Win11Debloat
 
-Invoke-RestMethod `
-    -Uri 'https://github.com/MineFartS/Win11Debloat/archive/refs/heads/master.zip' `
-    -OutFile "$Scratch/win11debloat.zip"
+if (-not (Test-Path "$Scratch\win11debloat.zip")) {
+
+    Invoke-RestMethod `
+        -Uri 'https://github.com/MineFartS/Win11Debloat/archive/refs/heads/master.zip' `
+        -OutFile "$Scratch\win11debloat.zip"
+
+}
 
 Expand-Archive `
-    "$Scratch/win11debloat.zip" `
-    "$Scratch" `
+    -Path "$Scratch\win11debloat.zip" `
+    -DestinationPath $Scratch `
     -Verbose -Force
 
 #===========================================================================================================
@@ -121,16 +145,9 @@ Expand-Archive `
 
 Repair-Permissions "$Scratch\ISO\sources\install.wim"
 
-# Find Index # for Windows 11 Pro
-$index = ( `
-    (Get-WindowsImage -ImagePath "$Scratch\ISO\sources\install.wim") `
-    | Where-Object ImageName -eq 'Windows 11 Pro' `
-).ImageIndex
-
 Mount-WindowsImage `
     -ImagePath "$Scratch\ISO\sources\install.wim" `
-    -Index $index `
-    -Path "$Scratch\MNT"
+    -Path "$Scratch\MNT\"
 
 #===========================================================================================================
 # Remove Packages from the image
@@ -178,11 +195,11 @@ Get-Content -Path "$Scratch\Win11Debloat-master\Appslist.txt" | ForEach-Object {
 # Modify the registry of the image
 
 # Mount Registry
-reg load HKLM\zCOMPONENTS "$Scratch\MNT\Windows\System32\config\COMPONENTS" | Out-Null
-reg load HKLM\zDEFAULT "$Scratch\MNT\Windows\System32\config\default" | Out-Null
-reg load HKLM\zNTUSER "$Scratch\MNT\Users\Default\ntuser.dat" | Out-Null
-reg load HKLM\zSOFTWARE "$Scratch\MNT\Windows\System32\config\SOFTWARE" | Out-Null
-reg load HKLM\zSYSTEM "$Scratch\MNT\Windows\System32\config\SYSTEM" | Out-Null
+reg load 'HKLM\zCOMPONENTS' "$Scratch\MNT\Windows\System32\config\COMPONENTS" | Out-Null
+reg load 'HKLM\zDEFAULT'    "$Scratch\MNT\Windows\System32\config\default"    | Out-Null
+reg load 'HKLM\zNTUSER'     "$Scratch\MNT\Users\Default\ntuser.dat"           | Out-Null
+reg load 'HKLM\zSOFTWARE'   "$Scratch\MNT\Windows\System32\config\SOFTWARE"   | Out-Null
+reg load 'HKLM\zSYSTEM'     "$Scratch\MNT\Windows\System32\config\SYSTEM"     | Out-Null
 
 # Iter through REG files
 Get-ChildItem -Path "$Scratch\Win11Debloat-master\Regfiles\" | ForEach-Object {
@@ -195,42 +212,24 @@ Get-ChildItem -Path "$Scratch\Win11Debloat-master\Regfiles\" | ForEach-Object {
 
 # Dismount Registry
 reg unload HKLM\zCOMPONENTS | Out-Null
-reg unload HKLM\zDEFAULT | Out-Null
-reg unload HKLM\zNTUSER | Out-Null
-reg unload HKLM\zSOFTWARE | Out-Null
-reg unload HKLM\zSYSTEM | Out-Null
+reg unload HKLM\zDEFAULT    | Out-Null
+reg unload HKLM\zNTUSER     | Out-Null
+reg unload HKLM\zSOFTWARE   | Out-Null
+reg unload HKLM\zSYSTEM     | Out-Null
 
 #===========================================================================================================
 # Finalize & Export the image
 
-Write-Output "Cleaning up image ..."
 dism.exe `
-    "/Image:$Scratch\MNT" `
+    "/Image:$Scratch\MNT\" `
     /Cleanup-Image `
     /StartComponentCleanup `
     /ResetBase
 
 #
 Dismount-WindowsImage `
-    -Path "$Scratch\MNT" `
+    -Path "$Scratch\MNT\" `
     -Save
-
-Write-Host "Exporting image ..."
-Dism.exe `
-    /Export-Image `
-    "/SourceImageFile:$Scratch\ISO\sources\install.wim" `
-    "/SourceIndex:$index" `
-    "/DestinationImageFile:$Scratch\ISO\sources\install2.wim" `
-    "/Compress:recovery"
-
-Remove-Item `
-    -Path "$Scratch\ISO\sources\install.wim" `
-    -Force | Out-Null
-
-Rename-Item `
-    -Path "$Scratch\ISO\sources\install2.wim" `
-    -NewName "install.wim" `
-    | Out-Null
 
 #===========================================================================================================
 # Finalize
