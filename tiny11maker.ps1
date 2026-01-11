@@ -50,7 +50,6 @@ if ($null -eq $Source) {
 # Create Scratch Directories
 
 takeown.exe /f $Scratch /r /d Y
-
 icacls.exe $Scratch /t /c /grant Administrators:F
 
 Remove-Item `
@@ -143,7 +142,8 @@ Expand-Archive `
 #===========================================================================================================
 # Mount Windows 11 Image
 
-Repair-Permissions "$Scratch\ISO\sources\install.wim"
+takeown.exe /f "$Scratch\ISO\sources\install.wim" /r /d Y
+icacls.exe "$Scratch\ISO\sources\install.wim" /t /c /grant Administrators:F
 
 Mount-WindowsImage `
     -ImagePath "$Scratch\ISO\sources\install.wim" `
