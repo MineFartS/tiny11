@@ -160,15 +160,13 @@ Expand-Archive `
 
 Write-Host "Mounting 'install.wim' ..."
 
-attrib -r "$Scratch\ISO\sources\install-temp.wim"
-
-#takeown.exe /F "$Scratch\ISO\sources\install-temp.wim"
-#icacls.exe "$Scratch\ISO\sources\install-temp.wim" /t /c /grant Administrators:F >$null
+attrib -r "$Scratch\ISO\sources\install-temp.wim" >$null
 
 Mount-WindowsImage `
     -ImagePath "$Scratch\ISO\sources\install-temp.wim" `
     -Path "$Scratch\MNT\" `
-    -Index $WIMindex
+    -Index $WIMindex `
+    | Out-Null
 
 #===========================================================================================================
 # Remove Packages from the image
@@ -225,6 +223,7 @@ reg load HKLM\zSYSTEM     "$Scratch\MNT\Windows\System32\config\SYSTEM"     | Ou
 # Iter through REG files
 Get-ChildItem -Path "$Scratch\Win11Debloat-master\Regfiles\" | ForEach-Object {
 
+    Write-Host
     Write-Host "Updating Registry: '$($_.Name)'"
     
     reg import $_.FullName
@@ -239,12 +238,18 @@ reg unload HKLM\zSOFTWARE   | Out-Null
 reg unload HKLM\zSYSTEM     | Out-Null
 
 #===========================================================================================================
-# Export the WIM image
+# Dismount the WIM image
 
-#
+Write-Host "Dismounting 'install.wim' ..."
+
 Dismount-WindowsImage `
     -Path "$Scratch\MNT\" `
     -Save
+
+#===========================================================================================================
+# Compress the WIM image
+
+Write-Host "Compressing 'install.wim' ..."
 
 Dism.exe `
     /Export-Image `
@@ -254,10 +259,11 @@ Dism.exe `
     "/Compress:recovery"
 
 Remove-Item `
-    -Path "$Scratch\ISO\sources\install-temp.wim"
+    -Path "$Scratch\ISO\sources\install-temp.wim" `
+    -Force
 
 #===========================================================================================================
-# Cleanup the image
+# Cleanup the ISO image
 
 dism.exe `
     "/Image:$Scratch\ISO\" `
@@ -267,9 +273,13 @@ dism.exe `
 
 #===========================================================================================================
 
+Write-Host "Downloading 'oscdimg.exe' ..."
+
 Invoke-WebRequest `
     -Uri "https://msdl.microsoft.com/download/symbols/oscdimg.exe/3D44737265000/oscdimg.exe" `
     -OutFile "$Scratch\oscdimg.exe"
+
+
 
 ."$Scratch\oscdimg.exe" `
     -m -o -u2 -udfver102 `
@@ -278,7 +288,6 @@ Invoke-WebRequest `
     $Out
 
 #===========================================================================================================
-# Finalize
 
 Write-Output "Creation completed!"
 
