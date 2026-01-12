@@ -147,7 +147,8 @@ icacls.exe "$Scratch\ISO\sources\install.wim" /t /c /grant Administrators:F
 
 Mount-WindowsImage `
     -ImagePath "$Scratch\ISO\sources\install.wim" `
-    -Path "$Scratch\MNT\"
+    -Path "$Scratch\MNT\" `
+    -Index 1
 
 #===========================================================================================================
 # Remove Packages from the image
@@ -195,11 +196,11 @@ Get-Content -Path "$Scratch\Win11Debloat-master\Appslist.txt" | ForEach-Object {
 # Modify the registry of the image
 
 # Mount Registry
-reg load 'HKLM\zCOMPONENTS' "$Scratch\MNT\Windows\System32\config\COMPONENTS" | Out-Null
-reg load 'HKLM\zDEFAULT'    "$Scratch\MNT\Windows\System32\config\default"    | Out-Null
-reg load 'HKLM\zNTUSER'     "$Scratch\MNT\Users\Default\ntuser.dat"           | Out-Null
-reg load 'HKLM\zSOFTWARE'   "$Scratch\MNT\Windows\System32\config\SOFTWARE"   | Out-Null
-reg load 'HKLM\zSYSTEM'     "$Scratch\MNT\Windows\System32\config\SYSTEM"     | Out-Null
+reg load HKLM\zCOMPONENTS "$Scratch\MNT\Windows\System32\config\COMPONENTS" | Out-Null
+reg load HKLM\zDEFAULT    "$Scratch\MNT\Windows\System32\config\default"    | Out-Null
+reg load HKLM\zNTUSER     "$Scratch\MNT\Users\Default\ntuser.dat"           | Out-Null
+reg load HKLM\zSOFTWARE   "$Scratch\MNT\Windows\System32\config\SOFTWARE"   | Out-Null
+reg load HKLM\zSYSTEM     "$Scratch\MNT\Windows\System32\config\SYSTEM"     | Out-Null
 
 # Iter through REG files
 Get-ChildItem -Path "$Scratch\Win11Debloat-master\Regfiles\" | ForEach-Object {
@@ -218,18 +219,33 @@ reg unload HKLM\zSOFTWARE   | Out-Null
 reg unload HKLM\zSYSTEM     | Out-Null
 
 #===========================================================================================================
-# Finalize & Export the image
-
-dism.exe `
-    "/Image:$Scratch\MNT\" `
-    /Cleanup-Image `
-    /StartComponentCleanup `
-    /ResetBase
 
 #
 Dismount-WindowsImage `
     -Path "$Scratch\MNT\" `
     -Save
+
+#===========================================================================================================
+# Cleanup the image
+
+dism.exe `
+    "/Image:$Scratch\ISO\" `
+    /Cleanup-Image `
+    /StartComponentCleanup `
+    /ResetBase
+
+#===========================================================================================================
+# Export the image
+
+Invoke-WebRequest `
+    -Uri "https://msdl.microsoft.com/download/symbols/oscdimg.exe/3D44737265000/oscdimg.exe" `
+    -OutFile "$Scratch\oscdimg.exe"
+
+."$Scratch\oscdimg.exe" `
+    -m -o -u2 -udfver102 `
+    "-bootdata:2#p0,e,b$Scratch\ISO\boot\etfsboot.com#pEF,e,b$Scratch\ISO\efi\microsoft\boot\efisys.bin" `
+    "$Scratch\ISO" `
+    $Out
 
 #===========================================================================================================
 # Finalize
