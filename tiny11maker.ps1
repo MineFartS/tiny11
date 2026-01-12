@@ -49,20 +49,25 @@ if ($null -eq $Source) {
 #===========================================================================================================
 # Create Scratch Directories
 
-takeown.exe /f $Scratch /r /d Y
-icacls.exe $Scratch /t /c /grant Administrators:F
+Write-Host 'Preparing Temporary Directory ...'
+
+takeown.exe /f $Scratch /r /d Y >$null
+icacls.exe $Scratch /t /c /grant Administrators:F >$null
 
 Remove-Item `
     -Path "$Scratch\ISO\" `
-    -Verbose -Recurse -Force
+    -Recurse -Force `
+    -ErrorAction SilentlyContinue
 
 Remove-Item `
     -Path "$Scratch\MNT\" `
-    -Verbose -Recurse -Force
+    -Recurse -Force `
+    -ErrorAction SilentlyContinue
 
 Remove-Item `
     -Path "$Scratch\Win11Debloat-master\" `
-    -Verbose -Recurse -Force
+    -Recurse -Force `
+    -ErrorAction SilentlyContinue
 
 New-Item `
     -ItemType Directory `
@@ -79,6 +84,8 @@ New-Item `
 #===========================================================================================================
 # Mount and Extract the Windows 11 ISO
 
+Write-Host 'Mounting Source ISO ...'
+
 # Mount the ISO and get the assigned drive letter
 $mountResult = Mount-DiskImage `
     -ImagePath $Source `
@@ -88,29 +95,31 @@ $mountResult = Mount-DiskImage `
 $ISOmnt = ($mountResult | Get-Volume).DriveLetter
 
 # Find Index # for Windows 11 Pro
-$index = ( `
+$WIMindex = ( `
     (Get-WindowsImage -ImagePath "$($ISOmnt):\sources\install.wim") `
     | Where-Object ImageName -eq 'Windows 11 Pro' `
 ).ImageIndex
 
-Write-Host "Exporting image ..."
-Dism.exe `
-    /Export-Image `
-    "/SourceImageFile:$($ISOmnt):\sources\install.wim" `
-    "/SourceIndex:$index" `
-    "/DestinationImageFile:$Scratch\ISO\sources\install.wim" `
-    "/Compress:recovery"
+Write-Host "Copying 'install.wim' ..."
 
-# Unmount the ISO
+Copy-Item `
+    -Path "$($ISOmnt):\sources\install.wim" `
+    -Destination "$Scratch\ISO\sources\install-temp.wim"
+
+Write-Host 'Dismounting Source ISO ...'
+
 Get-Volume `
     -DriveLetter $ISOmnt `
     | Get-DiskImage `
-    | Dismount-DiskImage
+    | Dismount-DiskImage `
+    | Out-Null
 
 #===========================================================================================================
 # Download & Extract the Windows 10 Installer ZIP
 
 if (-not (Test-Path "$Scratch\Win10Setup.zip")) {
+
+    Write-Host "Downloading 'Win10Setup.zip' ..." 
 
     Invoke-WebRequest `
         -Uri "https://github.com/MineFartS/tiny11/raw/refs/heads/main/Win10Setup.zip" `
@@ -118,15 +127,19 @@ if (-not (Test-Path "$Scratch\Win10Setup.zip")) {
 
 }
 
+Write-Host "Extracting 'Win10Setup.zip' ..."
+
 Expand-Archive `
     -Path "$Scratch\Win10Setup.zip" `
     -DestinationPath "$Scratch\ISO" `
-    -Force -Verbose
+    -Force
 
 #===========================================================================================================
 # Download & Extract Win11Debloat
 
 if (-not (Test-Path "$Scratch\win11debloat.zip")) {
+
+    Write-Host "Downloading 'Win11Debloat.zip' ..."
 
     Invoke-RestMethod `
         -Uri 'https://github.com/MineFartS/Win11Debloat/archive/refs/heads/master.zip' `
@@ -134,21 +147,28 @@ if (-not (Test-Path "$Scratch\win11debloat.zip")) {
 
 }
 
+Write-Host "Extracting 'Win11Debloat.zip' ..."
+
 Expand-Archive `
     -Path "$Scratch\win11debloat.zip" `
     -DestinationPath $Scratch `
-    -Verbose -Force
+    -Force `
+    | Out-Null
 
 #===========================================================================================================
 # Mount Windows 11 Image
 
-takeown.exe /f "$Scratch\ISO\sources\install.wim" /r /d Y
-icacls.exe "$Scratch\ISO\sources\install.wim" /t /c /grant Administrators:F
+Write-Host "Mounting 'install.wim' ..."
+
+attrib -r "$Scratch\ISO\sources\install-temp.wim"
+
+#takeown.exe /F "$Scratch\ISO\sources\install-temp.wim"
+#icacls.exe "$Scratch\ISO\sources\install-temp.wim" /t /c /grant Administrators:F >$null
 
 Mount-WindowsImage `
-    -ImagePath "$Scratch\ISO\sources\install.wim" `
+    -ImagePath "$Scratch\ISO\sources\install-temp.wim" `
     -Path "$Scratch\MNT\" `
-    -Index 1
+    -Index $WIMindex
 
 #===========================================================================================================
 # Remove Packages from the image
@@ -219,11 +239,22 @@ reg unload HKLM\zSOFTWARE   | Out-Null
 reg unload HKLM\zSYSTEM     | Out-Null
 
 #===========================================================================================================
+# Export the WIM image
 
 #
 Dismount-WindowsImage `
     -Path "$Scratch\MNT\" `
     -Save
+
+Dism.exe `
+    /Export-Image `
+    "/SourceImageFile:$Scratch\ISO\sources\install-temp.wim" `
+    "/SourceIndex:$WIMindex" `
+    "/DestinationImageFile:$Scratch\ISO\sources\install.wim" `
+    "/Compress:recovery"
+
+Remove-Item `
+    -Path "$Scratch\ISO\sources\install-temp.wim"
 
 #===========================================================================================================
 # Cleanup the image
@@ -235,7 +266,6 @@ dism.exe `
     /ResetBase
 
 #===========================================================================================================
-# Export the image
 
 Invoke-WebRequest `
     -Uri "https://msdl.microsoft.com/download/symbols/oscdimg.exe/3D44737265000/oscdimg.exe" `
