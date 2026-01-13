@@ -49,6 +49,7 @@ if ($null -eq $Source) {
 #===========================================================================================================
 # Create Scratch Directories
 
+Write-Host ''
 Write-Host 'Preparing Temporary Directory ...'
 
 takeown.exe /f $Scratch /r /d Y >$null
@@ -84,6 +85,7 @@ New-Item `
 #===========================================================================================================
 # Mount and Extract the Windows 11 ISO
 
+Write-Host ''
 Write-Host 'Mounting Source ISO ...'
 
 # Mount the ISO and get the assigned drive letter
@@ -100,12 +102,14 @@ $WIMindex = ( `
     | Where-Object ImageName -eq 'Windows 11 Pro' `
 ).ImageIndex
 
+Write-Host ''
 Write-Host "Copying 'install.wim' ..."
 
 Copy-Item `
     -Path "$($ISOmnt):\sources\install.wim" `
     -Destination "$Scratch\ISO\sources\install-temp.wim"
 
+Write-Host ''
 Write-Host 'Dismounting Source ISO ...'
 
 Get-Volume `
@@ -119,6 +123,7 @@ Get-Volume `
 
 if (-not (Test-Path "$Scratch\Win10Setup.zip")) {
 
+    Write-Host ''
     Write-Host "Downloading 'Win10Setup.zip' ..." 
 
     Invoke-WebRequest `
@@ -127,6 +132,7 @@ if (-not (Test-Path "$Scratch\Win10Setup.zip")) {
 
 }
 
+Write-Host ''
 Write-Host "Extracting 'Win10Setup.zip' ..."
 
 Expand-Archive `
@@ -139,6 +145,7 @@ Expand-Archive `
 
 if (-not (Test-Path "$Scratch\win11debloat.zip")) {
 
+    Write-Host ''
     Write-Host "Downloading 'Win11Debloat.zip' ..."
 
     Invoke-RestMethod `
@@ -147,6 +154,7 @@ if (-not (Test-Path "$Scratch\win11debloat.zip")) {
 
 }
 
+Write-Host ''
 Write-Host "Extracting 'Win11Debloat.zip' ..."
 
 Expand-Archive `
@@ -158,6 +166,7 @@ Expand-Archive `
 #===========================================================================================================
 # Mount Windows 11 Image
 
+Write-Host ''
 Write-Host "Mounting 'install.wim' ..."
 
 attrib -r "$Scratch\ISO\sources\install-temp.wim" >$null
@@ -176,7 +185,7 @@ Get-Content -Path "$Scratch\Win11Debloat-master\Appslist.txt" | ForEach-Object {
     #
     $app = ($_.Split('#')[0].Trim())
 
-    Write-Host ""
+    Write-Host ''
     Write-Output "Removing app: '$app'"
 
     #
@@ -223,7 +232,7 @@ reg load HKLM\zSYSTEM     "$Scratch\MNT\Windows\System32\config\SYSTEM"     | Ou
 # Iter through REG files
 Get-ChildItem -Path "$Scratch\Win11Debloat-master\Regfiles\" | ForEach-Object {
 
-    Write-Host
+    Write-Host ''
     Write-Host "Updating Registry: '$($_.Name)'"
     
     reg import $_.FullName
@@ -240,6 +249,7 @@ reg unload HKLM\zSYSTEM     | Out-Null
 #===========================================================================================================
 # Dismount the WIM image
 
+Write-Host ''
 Write-Host "Dismounting 'install.wim' ..."
 
 Dismount-WindowsImage `
@@ -249,6 +259,7 @@ Dismount-WindowsImage `
 #===========================================================================================================
 # Compress the WIM image
 
+Write-Host ''
 Write-Host "Compressing 'install.wim' ..."
 
 Dism.exe `
@@ -263,23 +274,20 @@ Remove-Item `
     -Force
 
 #===========================================================================================================
-# Cleanup the ISO image
 
-dism.exe `
-    "/Image:$Scratch\ISO\" `
-    /Cleanup-Image `
-    /StartComponentCleanup `
-    /ResetBase
+if (-not (Test-Path "$Scratch\oscdimg.exe")) {
 
-#===========================================================================================================
+    Write-Host ''
+    Write-Host "Downloading 'oscdimg.exe' ..."
 
-Write-Host "Downloading 'oscdimg.exe' ..."
+    Invoke-WebRequest `
+        -Uri "https://msdl.microsoft.com/download/symbols/oscdimg.exe/3D44737265000/oscdimg.exe" `
+        -OutFile "$Scratch\oscdimg.exe"
 
-Invoke-WebRequest `
-    -Uri "https://msdl.microsoft.com/download/symbols/oscdimg.exe/3D44737265000/oscdimg.exe" `
-    -OutFile "$Scratch\oscdimg.exe"
+}
 
-
+Write-Host ''
+Write-Host "Exporting 'tiny11.iso' ..."
 
 ."$Scratch\oscdimg.exe" `
     -m -o -u2 -udfver102 `
@@ -288,7 +296,3 @@ Invoke-WebRequest `
     $Out
 
 #===========================================================================================================
-
-Write-Output "Creation completed!"
-
-Pause
