@@ -155,33 +155,13 @@ Get-Content -Path "bin\Win11Debloat\Appslist.txt" | ForEach-Object {
     $app = ($_.Split('#')[0].Trim())
 
     Write-Output "`nRemoving app: '$app'"
-
-    if (($app -eq "Microsoft.OneDrive") -or ($app -eq "Microsoft.Edge")) {
-
-        winget.exe `
-            uninstall `
-            --accept-source-agreements `
-            --id $app
-
-    } else {
-            
-        Get-AppxPackage `
-            -Name "*$app*" `
-            -AllUsers `
-        | Remove-AppxPackage `
-            -AllUsers `
-            -ErrorAction Continue
-
-    }
-
+    
     # Remove provisioned app from OS image, so the app won't be installed for any new users
-    Get-AppxProvisionedPackage -Online `
+    Get-AppxProvisionedPackage `
+        -Path "$Scratch\MNT\" `
     | Where-Object PackageName -like $app `
-    | ForEach-Object { 
-        Remove-ProvisionedAppxPackage `
-        -Online -AllUsers `
-        -PackageName $_.PackageName 
-    }
+    | Remove-ProvisionedAppxPackage `
+        -Path "$Scratch\MNT\"
 
 }
 
