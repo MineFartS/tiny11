@@ -28,14 +28,22 @@ Set-Location $PSScriptRoot
 
 Add-Type -AssemblyName System.Windows.Forms
 
-$fileDialog = New-Object System.Windows.Forms.OpenFileDialog
-$fileDialog.InitialDirectory = "$env:USERPROFILE\Downloads"
-$fileDialog.Filter = 'ISO Files (*.iso)|*.iso|All Files (*.*)|*.*'
-$fileDialog.Title = 'Please select an ISO file to mount'
-$fileDialog.ShowHelp = $true
-$fileDialog.ShowDialog() | Out-Null
+$OpenDialog = New-Object System.Windows.Forms.OpenFileDialog
+$SaveDialog = New-Object System.Windows.Forms.SaveFileDialog
 
-$Source = $fileDialog.FileName
+@($OpenDialog, $SaveDialog) | ForEach-Object {
+    $_.InitialDirectory = "$env:USERPROFILE\Downloads"
+    $_.Filter = 'ISO Files (*.iso)|*.iso|All Files (*.*)|*.*'
+    $_.ShowHelp = $true
+}
+
+$OpenDialog.Title = 'Please select an ISO file to mount'
+$OpenDialog.ShowDialog() | Out-Null
+$Source = $OpenDialog.FileName
+
+$SaveDialog.Title = 'Where should the output ISO be saved'
+$SaveDialog.ShowDialog() | Out-Null
+$Output = $SaveDialog.FileName
 
 #===========================================================================================================
 # Init Submodules
@@ -205,6 +213,6 @@ Write-Host "`nExporting 'tiny11.iso' ..."
     -m -o -u2 -udfver102 `
     "-bootdata:2#p0,e,b$Scratch\ISO\boot\etfsboot.com#pEF,e,b$Scratch\ISO\efi\microsoft\boot\efisys.bin" `
     "$Scratch\ISO" `
-    $Out
+    $Output
 
 #===========================================================================================================
