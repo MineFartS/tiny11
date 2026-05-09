@@ -69,6 +69,10 @@ Write-Host "`nPreparing Temporary Directory ..."
 
 $Scratch = "$PSScriptRoot\.Scratch"
 
+Dismount-WindowsImage `
+    -Path "$Scratch\MNT" `
+    -Discard
+
 takeown.exe /f $Scratch /r /d Y
 icacls.exe $Scratch /t /c /grant Administrators:F
 
