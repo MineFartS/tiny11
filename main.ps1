@@ -60,7 +60,7 @@ $Output = $SaveDialog.FileName
 
 Write-Host "`nInitializing Submodules ..."
 
-git.exe submodule update --init --recursive | Out-Null
+git.exe submodule update --init --recursive
 
 #===========================================================================================================
 # Create Scratch Directories
@@ -69,23 +69,20 @@ Write-Host "`nPreparing Temporary Directory ..."
 
 $Scratch = "$PSScriptRoot\.Scratch"
 
-takeown.exe /f $Scratch /r /d Y >$null
-icacls.exe $Scratch /t /c /grant Administrators:F >$null
+takeown.exe /f $Scratch /r /d Y
+icacls.exe $Scratch /t /c /grant Administrators:F
 
 Remove-Item `
     -Path $Scratch `
-    -Recurse -Force `
-    -ErrorAction SilentlyContinue
+    -Recurse -Force
 
 New-Item `
     -ItemType Directory `
-    -Path "$Scratch\ISO\sources\" `
-    -Force | Out-Null
+    -Path "$Scratch\ISO\sources\"
 
 New-Item `
     -ItemType Directory `
-    -Path "$Scratch\MNT" `
-    -Force | Out-Null
+    -Path "$Scratch\MNT"
 
 #===========================================================================================================
 # Mount and Extract the Windows 11 ISO
@@ -121,8 +118,7 @@ Write-Host "`nDismounting Source ISO ..."
 Get-Volume `
     -DriveLetter $ISOmnt `
     | Get-DiskImage `
-    | Dismount-DiskImage `
-    | Out-Null
+    | Dismount-DiskImage
 
 #===========================================================================================================
 # Extract the Windows 10 Installer ZIP
@@ -144,8 +140,7 @@ attrib -r "$Scratch\ISO\sources\install.wim" >$null
 Mount-WindowsImage `
     -ImagePath "$Scratch\ISO\sources\install.wim" `
     -Path "$Scratch\MNT\" `
-    -Index $WIMindex `
-    | Out-Null
+    -Index $WIMindex
 
 #===========================================================================================================
 # Remove Packages from the image
@@ -169,11 +164,11 @@ Get-Content -Path "bin\Win11Debloat\Appslist.txt" | ForEach-Object {
 # Modify the registry of the image
 
 # Mount Registry
-reg load HKLM\zCOMPONENTS "$Scratch\MNT\Windows\System32\config\COMPONENTS" | Out-Null
-reg load HKLM\zDEFAULT    "$Scratch\MNT\Windows\System32\config\default"    | Out-Null
-reg load HKLM\zNTUSER     "$Scratch\MNT\Users\Default\ntuser.dat"           | Out-Null
-reg load HKLM\zSOFTWARE   "$Scratch\MNT\Windows\System32\config\SOFTWARE"   | Out-Null
-reg load HKLM\zSYSTEM     "$Scratch\MNT\Windows\System32\config\SYSTEM"     | Out-Null
+reg load HKLM\zCOMPONENTS "$Scratch\MNT\Windows\System32\config\COMPONENTS"
+reg load HKLM\zDEFAULT    "$Scratch\MNT\Windows\System32\config\default"
+reg load HKLM\zNTUSER     "$Scratch\MNT\Users\Default\ntuser.dat"
+reg load HKLM\zSOFTWARE   "$Scratch\MNT\Windows\System32\config\SOFTWARE"
+reg load HKLM\zSYSTEM     "$Scratch\MNT\Windows\System32\config\SYSTEM"
 
 # Iter through REG files
 Get-ChildItem -Path "bin\Win11Debloat\Regfiles\" | ForEach-Object {
@@ -185,11 +180,11 @@ Get-ChildItem -Path "bin\Win11Debloat\Regfiles\" | ForEach-Object {
 }
 
 # Dismount Registry
-reg unload HKLM\zCOMPONENTS | Out-Null
-reg unload HKLM\zDEFAULT    | Out-Null
-reg unload HKLM\zNTUSER     | Out-Null
-reg unload HKLM\zSOFTWARE   | Out-Null
-reg unload HKLM\zSYSTEM     | Out-Null
+reg unload HKLM\zCOMPONENTS
+reg unload HKLM\zDEFAULT
+reg unload HKLM\zNTUSER
+reg unload HKLM\zSOFTWARE
+reg unload HKLM\zSYSTEM
 
 #===========================================================================================================
 # Dismount the WIM image
