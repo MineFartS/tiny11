@@ -4,24 +4,13 @@
 
 ---
 
-## Parameters:
-
-| Name    | Default                                  | Description          |
-|---------|------------------------------------------|----------------------|
-| Scratch | %tmp%\tiny11                             | Temporary Directory  |
-| Out     | C:\Users\%username%\Downloads\tiny11.iso | Output ISO file path |
-| Source  | {Opens Explorer Dialog}                  | Windows 11 ISO       |
-
----
-
 ## Instructions:
+
+1. Clone this repository
 
 1. Download the Windows 11 ISO from the [Microsoft website](https://www.microsoft.com/en-us/software-download/windows11#:~:text=Download%20Windows%2011%20Disk%20Image)
 
-2. Start the script :
-```powershell
-irm https://raw.githubusercontent.com/MineFartS/tiny11/refs/heads/main/tiny11maker.ps1 | iex
-``` 
+2. Start the script: `powershell -File main.ps1`
 
 3. Locate the downloaded ISO file when prompted.
 

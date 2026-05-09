@@ -1,0 +1,16 @@
+
+[submodule "7z"]
+	path = bin/7z
+	url = https://github.com/a-sync/7z-extra
+    ignore = all
+
+[submodule "oscdimg"]
+	path = bin/oscdimg
+	url = https://github.com/andrew-s-taylor/oscdimg
+    ignore = all
+
+[submodule "bin/Win11Debloat"]
+	path = bin/Win11Debloat
+	url = https://github.com/MineFartS/Win11Debloat
+    ignore = all
+
