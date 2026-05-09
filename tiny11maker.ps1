@@ -107,7 +107,7 @@ Write-Host "Copying 'install.wim' ..."
 
 Copy-Item `
     -Path "$($ISOmnt):\sources\install.wim" `
-    -Destination "$Scratch\ISO\sources\install-temp.wim"
+    -Destination "$Scratch\ISO\sources\install.wim"
 
 Write-Host ''
 Write-Host 'Dismounting Source ISO ...'
@@ -169,10 +169,10 @@ Expand-Archive `
 Write-Host ''
 Write-Host "Mounting 'install.wim' ..."
 
-attrib -r "$Scratch\ISO\sources\install-temp.wim" >$null
+attrib -r "$Scratch\ISO\sources\install.wim" >$null
 
 Mount-WindowsImage `
-    -ImagePath "$Scratch\ISO\sources\install-temp.wim" `
+    -ImagePath "$Scratch\ISO\sources\install.wim" `
     -Path "$Scratch\MNT\" `
     -Index $WIMindex `
     | Out-Null
@@ -255,23 +255,6 @@ Write-Host "Dismounting 'install.wim' ..."
 Dismount-WindowsImage `
     -Path "$Scratch\MNT\" `
     -Save
-
-#===========================================================================================================
-# Compress the WIM image
-
-Write-Host ''
-Write-Host "Compressing 'install.wim' ..."
-
-Dism.exe `
-    /Export-Image `
-    "/SourceImageFile:$Scratch\ISO\sources\install-temp.wim" `
-    "/SourceIndex:$WIMindex" `
-    "/DestinationImageFile:$Scratch\ISO\sources\install.wim" `
-    "/Compress:recovery"
-
-Remove-Item `
-    -Path "$Scratch\ISO\sources\install-temp.wim" `
-    -Force
 
 #===========================================================================================================
 
