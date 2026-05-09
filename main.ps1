@@ -16,12 +16,22 @@ if (! $myWindowsPrincipal.IsInRole($adminRole)) {
 #===========================================================================================================
 # Prepare the Terminal
 
-# Set the window title
 $Host.UI.RawUI.WindowTitle = "Tiny11 Image Creator"
 
 Clear-Host
 
 Set-Location $PSScriptRoot
+
+Write-Host @"
+.---------------------------------------------------.
+|ooooooooooo o88                           oo    oo |
+|88  888  88 oooo  oo oooooo oooo   oooo o888  o888 |
+|    888      888   888   888 888   888   888   888 |
+|    888      888   888   888  888 888    888   888 |
+|   o888o    o888o o888o o888o   8888    o888o o888o|
+|                             o8o888                |
+'---------------------------------------------------'
+"@
 
 #===========================================================================================================
 # Prompt for the Windows 11 Installer ISO
