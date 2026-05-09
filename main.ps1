@@ -92,12 +92,17 @@ New-Item `
 
 Write-Host "`nMounting Source ISO ..."
 
-# Mount the ISO and get the assigned drive letter
-$mountResult = Mount-DiskImage `
-    -ImagePath $Source `
-    -PassThru -Verbose
+$mount = Get-DiskImage -ImagePath $Source
 
-$ISOmnt = ($mountResult | Get-Volume).DriveLetter
+if (-not $mount.Attached) {
+
+    $mount = Mount-DiskImage `
+        -ImagePath $Source `
+        -PassThru -Verbose
+
+}
+
+$ISOmnt = ($mount | Get-Volume).DriveLetter
 
 # Find Index # for Windows 11 Pro
 $WIMindex = ( `
