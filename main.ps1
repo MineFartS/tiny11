@@ -52,6 +52,7 @@ $OpenDialog.ShowDialog() | Out-Null
 $Source = $OpenDialog.FileName
 
 $SaveDialog.Title = 'Where should the output ISO be saved'
+$SaveDialog.FileName = 'tiny11.iso'
 $SaveDialog.ShowDialog() | Out-Null
 $Output = $SaveDialog.FileName
 
@@ -159,8 +160,9 @@ Get-Content -Path "bin\Win11Debloat\Appslist.txt" | ForEach-Object {
     Get-AppxProvisionedPackage `
         -Path "$Scratch\MNT\" `
     | Where-Object PackageName -like $app `
-    | Remove-ProvisionedAppxPackage `
-        -Path "$Scratch\MNT\"
+    | Remove-AppxProvisionedPackage `
+        -Path "$Scratch\MNT\" `
+        -Verbose
 
 }
 
